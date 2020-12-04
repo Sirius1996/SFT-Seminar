@@ -44,9 +44,47 @@ Traditional disk-based index structures such as the B-tree will effectively doub
 Hence Log-structured merge tree (LSM-Tree) has been widely used by many distributed databases, as it provides efficient indexing for a key-value store with a high rate of inserts and deletes.
 The LSM-tree uses an algorithm that defers and batches index changes, cascading the changes from a memory-based component through one or more disk components in an efficient manner reminiscent of merge sort. 
 During this process all index values are continuously accessible to retrievals (aside from very short locking periods), either through the memory component or one of the disk components.
-It is a hybrid data structure, with a main memory layer (C0) placed on top of one or more filesystem layers (C1, and so on). 
-In LSM-tree, updates are flushed down in batches, since this could reduce Disk I/O. 
-Multiple updates on a given key may end up spread across C0 and any number of files in C1 (or below). 
+
+\subsection{Compaction in LSM KV Stores}
+
+Compaction is a very critical mechanism in a system based on LSM-Tree. 
+Log append method brings high-throughput writes. 
+As the sstable continues to be written, more and more files will be opened by the system, and the accumulated data changes (updates, deletes) operations for the same key will increase. 
+Since sstable is immutable, the data in the memory will reaches the upper limit in certain layer.
+In order to reduce the number of files and clean up invalid data in time, the compaction mechanism was introduced to optimize read performance and space.
+\newline
+Compaction can be implemented in many ways. For example, RocksDB implements Tiered+Leveled, termed Level compaction.\cite{RocksDB_compaction_algo1}. 
+\newline
+Generally, in LSM tree, each level contains multiple partitions of data sorted by keys. When  compaction will be triggered by continuously recycling old version data and merging multiple layers into one layer through periodic background tasks.
+The basic procedure goes as following:
+\begin{figure}[h]
+    \centering
+	\includegraphics[scale=0.3]{LSM_Tree1.png}
+    \caption{LSM Tree}
+    \label{fig:mesh1}
+\end{figure}
+\newline
+As is shown in Figure. Compaction into level N (L(n)) merges data from L(n-1) to L(n), where data is rewirted into the new level. 
+In original paper of LSM tree, all data from L(n-1) is merged into L(n). 
+In morden distributed databases such as LevelDB and RocksDB, overlapping data is eliminated, therefore for most time, only some data will be merged into new level.
+\newline
+Generally, LSM tree will continuously compact key-value pairs ,and the compaction and disk flushes will trigger big writes, which will cause significantly overheads due to I/O amplifications.
+
+
+\subsection{Tow-level Sharding}
+Sharding is widely used in distributed databases. Large data sets or high throughput applications can challenge the capacity of one single server.
+Each area has the same schema and columns, but each table has completely different rows. 
+Similarly, the data stored in each partition is unique and has nothing to do with the data stored in other partitions.
+Sharding divides a piece of data into two or more smaller blocks, called logical shards.
+Then, logical shards are distributed on separate database nodes, called physical shards.
+Physical shards can hold multiple logical shards. 
+Nevertheless, the data stored in all shards collectively represent the entire logical data set.
+\newline
+A tow-level sharding way is introduced in the paper\cite{mainpaper}. 
+Hailstorm uses a tow-step data assignment scheme, where data objects are dynamically assigned to different partitions, 
+so that the system could react better to the changes in the workfload and perform better load balance.
+The target LSM-based databases still use the filesystem solution to redistribute data blocks into different nodes uniformly.
+
 
 \subsection{Skew in Distributed Databases}
 
@@ -56,17 +94,6 @@ Distributed database use sharding to tore larger dataset and handle additional r
 The database engine translates user queries into individual queries that are routed to one or multiple database instances for execution.
 Therefore, the database may suffer skew issue, where keys are unevenly to different nodes, which could cause uneven access and some nodes may become the hotsopt.
 This could lead to globally performance degradation.
-
-\subsection{Compaction in LSM KV Stores}
-
-
-As is shown in Figure. 1, if the insertion causes the C0 component to exceed a certain size threshold, a contiguous segment of entries is removed from C0 and merged into C1 on disk.  
-\begin{figure}[h]
-    \centering
-	\includegraphics[scale=0.4]{LSM_Tree1.png}
-    \caption{LSM Tree}
-    \label{fig:mesh1}
-\end{figure}
 
 
 
