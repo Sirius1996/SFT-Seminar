@@ -6,6 +6,45 @@
   month = {March},
   pages = {301–316}
 }
+@ARTICLE{7569086,  author={Y. {Yue} and B. {He} and Y. {Li} and W. {Wang}},  journal={IEEE Transactions on Parallel and Distributed Systems},   title={Building an Efficient Put-Intensive Key-Value Store with Skip-Tree},   year={2017},  volume={28},  number={4},  pages={961-973},  doi={10.1109/TPDS.2016.2609912}}
+@ARTICLE{10.1145/3033273,
+author = {Lu, Lanyue and Pillai, Thanumalayan Sankaranarayana and Gopalakrishnan, Hariharan and Arpaci-Dusseau, Andrea C. and Arpaci-Dusseau, Remzi H.},
+title = {WiscKey: Separating Keys from Values in SSD-Conscious Storage},
+year = {2017},
+issue_date = {March 2017},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {13},
+number = {1},
+issn = {1553-3077},
+url = {https://doi.org/10.1145/3033273},
+doi = {10.1145/3033273},
+abstract = {We present WiscKey, a persistent LSM-tree-based key-value store with a performance-oriented data layout that separates keys from values to minimize I/O amplification. The design of WiscKey is highly SSD optimized, leveraging both the sequential and random performance characteristics of the device. We demonstrate the advantages of WiscKey with both microbenchmarks and YCSB workloads. Microbenchmark results show that WiscKey is 2.5 \texttimes{} to 111 \texttimes{} faster than LevelDB for loading a database (with significantly better tail latencies) and 1.6 \texttimes{} to 14 \texttimes{} faster for random lookups. WiscKey is faster than both LevelDB and RocksDB in all six YCSB workloads.},
+journal = {ACM Trans. Storage},
+month = mar,
+articleno = {5},
+numpages = {28},
+keywords = {flash-based SSDs, WiscKey, LevelDB}
+}
+@inproceedings{10.5555/2813767.2813783,
+author = {Marmol, Leonardo and Sundararaman, Swaminathan and Talagala, Nisha and Rangaswami, Raju},
+title = {NVMKV: A Scalable, Lightweight, FTL-Aware Key-Value Store},
+year = {2015},
+isbn = {9781931971225},
+publisher = {USENIX Association},
+address = {USA},
+abstract = {Key-value stores are ubiquitous in high performance data-intensive, scale out, and NoSQL environments. Many KV stores use flash devices for meeting their performance needs. However, by using flash as a simple block device, these KV stores are unable to fully leverage the powerful capabilities that exist within Flash Translation Layers (FTLs). NVMKV is a lightweight KV store that leverages native FTL capabilities such as sparse addressing, dynamic mapping, transactional persistence, and support for high-levels of lock free parallelism. Our evaluation of NVMKV demonstrates that it provides scalable, high-performance, and ACID compliant KV operations at close to raw device speeds.},
+booktitle = {Proceedings of the 2015 USENIX Conference on Usenix Annual Technical Conference},
+pages = {207–219},
+numpages = {13},
+location = {Santa Clara, CA},
+series = {USENIX ATC '15}
+}
+@inproceedings{Yao2017ALC,
+  title={A Light-weight Compaction Tree to Reduce I / O Amplification toward Efficient Key-Value Stores},
+  author={T. Yao and Jiguang Wan and P. Huang and Xubin He and Q. Gui and F. Wu and C. Xie},
+  year={2017}
+}
 @misc{mongodb,
   title        = {MongoDB},
   howpublished = {\url{https://www.mongodb.com/}}
@@ -19,4 +58,17 @@
   author       = {RocksDB},
   title        = {Overview of Compaction algorithm},
   howpublished = {\url{https://github.com/facebook/rocksdb/wiki/Compaction}},
+}
+@misc{MongoDB_balancing1,
+  author       = {MongoDB},
+  title        = {Chunk Balancing and Collection Limits},
+  howpublished = {\url{https://www.mongodb.com/blog/post/sharding-pitfalls-part-iii-chunk-balancing-and}},
+}
+@inproceedings{SMRDB,
+author = {Pitchumani, Rekha and Hughes, James and Miller, Ethan},
+year = {2015},
+month = {05},
+pages = {},
+title = {SMRDB: Key-Value Data Store for Shingled Magnetic Recording Disks},
+doi = {10.1145/2757667.2757680}
 }

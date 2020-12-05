@@ -10,6 +10,9 @@
 \pagestyle{headings}
 \usepackage{a4wide}
 \usepackage{graphicx}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{csquotes}
 \graphicspath{ {./images/} }
 \usepackage[colorlinks,hyperfigures,backref,bookmarks,draft=false]{hyperref}
 
@@ -99,19 +102,48 @@ This could lead to globally performance degradation.
 
 \section{Previous and Related Work}
 
-Study the history of your topic by investigating its related work.
-Compare the given paper to other publications dealing with the same research field.
-Describe the shortcoming of existing approaches that will be solved or improved by the paper of your topic.
+\subsection{Skew in Distributed Databases}
 
-This is also the place to cite all sources and papers you have used in this handin and in your presentation. 
-Bib\TeX$\!$ entries describing references are to be added to the \verb|refs.bib| file. 
-You can find pre-formatted Bib\TeX$\!$ records in the Internet -- e.g. using the ACM Digital Library or Google Scholar.
+Previously proposed solutions to eliminate skew in several ways.
+MongoDB introduces a balancer to mitigate imbalanced shards\cite{MongoDB_balancing1}.
+Some manual operations can also be performed, e.g., moving "hotspot" chunks manually to address the imbalances. 
+In practice, some table related operations will also work, e.g., spliting one table into several sub-tables.
 
-\begin{quotation}
-	``Sometimes you might want to use the \emph{quotation} environment in order to cite larger passages of the related work.''
-\end{quotation}
 
-\section{The Topic's Approach}
+\subsection{Compaction and performance degradation}
+Compaction may cause severe I/O performance degradation in LSM-based distributed databases, 
+as it merges multiple tables and writes back to disk, which will typically comsue large I/O and CPU computing resources.
+A benchmark test is conducted in the paper\cite{mainpaper}, 
+\begin{displayquote}
+	Profiling this particular experiment
+	reveals that storage is saturated as I/O bandwidth remains
+	almost constantly close to 320 MB/s, the maximum write
+	bandwidth for our SSD. We also observe peaks of CPU utilization
+	when compaction tasks run. 
+\end{displayquote}
+\begin{figure}[h]
+    \centering
+	\includegraphics[scale=0.3]{Campaction perf.png}
+    \caption{Embedded RocksDB throughput over time (HH:mm) on
+	a node equipped with an Intel S3500 Series SSD using the YCSB
+	A [38] workload (50$\%$ reads and 50$\%$ writes).}
+    \label{fig:mesh1}
+\end{figure}
+Some solutions \cite{7569086} try to optimize the LSM-tree structure\cite{Yao2017ALC}, to introduce larger memory to cache more KV items, 
+to leverage some specific characteristic of different devices \cite{10.1145/3033273, 10.5555/2813767.2813783}, or to reduce the number of the levels\cite{SMRDB}.
+These solutions are mostly aimed at LSM-tree structure on individual nodes, but they don't take the utilization of other nodes in consideration.
+
+\subsection{Distributed Databases with LSM Storage Engines}
+TODO: sharding will not work
+
+\subsection{Summary}
+It can be shown from the previous work that skew will cause severe performance degradation, and the database system suffer from I/O brusts due to compaction and disk flushing.
+Hailstrom tries to solve these problems by disaggregate resources to address load balancing at database and storage layers seperately.
+
+\section{Hailstrom: disaggregate compute and storage}
+
+\subsection{Design principles}
+
 
 Describe the solution of the given paper, but do not copy it or repeat all of its details.
 Present and explain the main concepts. 
