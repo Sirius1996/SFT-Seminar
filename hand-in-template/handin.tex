@@ -108,7 +108,24 @@ Previously proposed solutions to eliminate skew in several ways.
 MongoDB introduces a balancer to mitigate imbalanced shards\cite{MongoDB_balancing1}.
 Some manual operations can also be performed, e.g., moving "hotspot" chunks manually to address the imbalances. 
 In practice, some table related operations will also work, e.g., spliting one table into several sub-tables.
-
+\newline
+Resharding could be carried out manually or automatically to reduce the influence on performance due to skew.
+Auto-splitting is a mechanism in MongoDB\cite{MongoDB_sharding1} that detect automatically when data overflow happens in chunks, 
+and then split the oversized chunk into smaller pieces.
+The server that runs MongoDB contains the process ChunkSplitter that runs continuously to detect weather any chunk grows beyond the configured chunk size (maxChunkSizeBytes) due to some insert operation.
+\newline
+The auto split task will be carried out if possible and necessary. ChunkSplitter supports asynchronous auto-split, thus, 
+multiple split operations could be handled concurrently with no overlap. 
+Basic proceduce goes as following: 
+First, ChunkSplitter will set the flag to the chunks which need resharding, where the estimated data size will be reset to handle the potiential in-coming writing operations.
+Then the splitVector will perform the split by inserting the split keys to original chunk vector, and returning the split points.
+\newline
+Auto-split may not be enough to handle skew issue, as it requires additional operations to reduce read operation hot spots.
+So MongoDB uses top chunk optimization to prevent some top chunks becoming potential hot spot.
+The balancer ties to move the top chunk out of the shart when auto-split is carried out.
+MongoDB also provides auto-balancing mechanism that try to reduce hot spot chunks, where a balancer process runs continuously in the backgroud to monitor the chunk distribution in the cluster.
+\newline
+Resharding operation may still cause some performance loss, some manual operations that takes the structure of the table in consideration may be costly in time.
 
 \subsection{Compaction and performance degradation}
 Compaction may cause severe I/O performance degradation in LSM-based distributed databases, 
@@ -129,9 +146,12 @@ A benchmark test is conducted in the paper\cite{mainpaper},
 	A [38] workload (50$\%$ reads and 50$\%$ writes).}
     \label{fig:mesh1}
 \end{figure}
-Some solutions \cite{7569086} try to optimize the LSM-tree structure\cite{Yao2017ALC}, to introduce larger memory to cache more KV items, 
+to introduce larger memory to cache more KV items, 
 to leverage some specific characteristic of different devices \cite{10.1145/3033273, 10.5555/2813767.2813783}, or to reduce the number of the levels\cite{SMRDB}.
 These solutions are mostly aimed at LSM-tree structure on individual nodes, but they don't take the utilization of other nodes in consideration.
+
+\subsubsection{Light-weight LSM Tree}
+The light-weight compaction tree \cite{Yao2017ALC} is a variant from the original LSM tree.
 
 \subsection{Distributed Databases with LSM Storage Engines}
 TODO: sharding will not work
