@@ -44,20 +44,20 @@ It shows that Hailstorm achieves load balance in many MongoDB deployments with s
 \subsection{LSM-Tree}
 
 Traditional disk-based index structures such as the B-tree will effectively double the I/O cost of the transaction to maintain an index such as this in real time, increasing the total system cost up to fifty percent. 
-Hence Log-structured merge tree (LSM-Tree) has been widely used by many distributed databases, as it provides efficient indexing for a key-value store with a high rate of inserts and deletes.
+Hence Log-structured merge tree (LSM-Tree) \cite{LSM-tree} has been widely used by many distributed databases, as it provides efficient indexing for a key-value store with a high rate of inserts and deletes.
 The LSM-tree uses an algorithm that defers and batches index changes, cascading the changes from a memory-based component through one or more disk components in an efficient manner reminiscent of merge sort. 
 During this process all index values are continuously accessible to retrievals (aside from very short locking periods), either through the memory component or one of the disk components.
 
 \subsection{Compaction in LSM KV Stores}
 
-Compaction is a very critical mechanism in a system based on LSM-Tree. 
+Compaction is a critical mechanism in a system based on LSM-Tree. 
 Log append method brings high-throughput writes. 
 As the sstable continues to be written, more and more files will be opened by the system, and the accumulated data changes (updates, deletes) operations for the same key will increase. 
 Since sstable is immutable, the data in the memory will reaches the upper limit in certain layer.
 In order to reduce the number of files and clean up invalid data in time, the compaction mechanism was introduced to optimize read performance and space.
-\newline
+\par
 Compaction can be implemented in many ways. For example, RocksDB implements Tiered+Leveled, termed Level compaction.\cite{RocksDB_compaction_algo1}. 
-\newline
+\par
 Generally, in LSM tree, each level contains multiple partitions of data sorted by keys. When  compaction will be triggered by continuously recycling old version data and merging multiple layers into one layer through periodic background tasks.
 The basic procedure goes as following:
 \begin{figure}[h]
@@ -66,11 +66,11 @@ The basic procedure goes as following:
     \caption{LSM Tree}
     \label{fig:mesh1}
 \end{figure}
-\newline
+\par
 As is shown in Figure. Compaction into level N (L(n)) merges data from L(n-1) to L(n), where data is rewirted into the new level. 
 In original paper of LSM tree, all data from L(n-1) is merged into L(n). 
 In morden distributed databases such as LevelDB and RocksDB, overlapping data is eliminated, therefore for most time, only some data will be merged into new level.
-\newline
+\par
 Generally, LSM tree will continuously compact key-value pairs ,and the compaction and disk flushes will trigger big writes, which will cause significantly overheads due to I/O amplifications.
 
 
@@ -82,7 +82,7 @@ Sharding divides a piece of data into two or more smaller blocks, called logical
 Then, logical shards are distributed on separate database nodes, called physical shards.
 Physical shards can hold multiple logical shards. 
 Nevertheless, the data stored in all shards collectively represent the entire logical data set.
-\newline
+\par
 A tow-level sharding way is introduced in the paper\cite{mainpaper}. 
 Hailstorm uses a tow-step data assignment scheme, where data objects are dynamically assigned to different partitions, 
 so that the system could react better to the changes in the workfload and perform better load balance.
@@ -108,23 +108,22 @@ Previously proposed solutions to eliminate skew in several ways.
 MongoDB introduces a balancer to mitigate imbalanced shards\cite{MongoDB_balancing1}.
 Some manual operations can also be performed, e.g., moving "hotspot" chunks manually to address the imbalances. 
 In practice, some table related operations will also work, e.g., spliting one table into several sub-tables.
-\newline
+\par
 Resharding could be carried out manually or automatically to reduce the influence on performance due to skew.
 Auto-splitting is a mechanism in MongoDB\cite{MongoDB_sharding1} that detect automatically when data overflow happens in chunks, 
 and then split the oversized chunk into smaller pieces.
 The server that runs MongoDB contains the process ChunkSplitter that runs continuously to detect weather any chunk grows beyond the configured chunk size (maxChunkSizeBytes) due to some insert operation.
-\newline
+\par
 The auto split task will be carried out if possible and necessary. ChunkSplitter supports asynchronous auto-split, thus, 
 multiple split operations could be handled concurrently with no overlap. 
 Basic proceduce goes as following: 
 First, ChunkSplitter will set the flag to the chunks which need resharding, where the estimated data size will be reset to handle the potiential in-coming writing operations.
 Then the splitVector will perform the split by inserting the split keys to original chunk vector, and returning the split points.
-\newline
+\par
 Auto-split may not be enough to handle skew issue, as it requires additional operations to reduce read operation hot spots.
 So MongoDB uses top chunk optimization to prevent some top chunks becoming potential hot spot.
 The balancer ties to move the top chunk out of the shart when auto-split is carried out.
 MongoDB also provides auto-balancing mechanism that try to reduce hot spot chunks, where a balancer process runs continuously in the backgroud to monitor the chunk distribution in the cluster.
-\newline
 Resharding operation may still cause some performance loss, some manual operations that takes the structure of the table in consideration may be costly in time.
 
 \subsection{Compaction and performance degradation}
@@ -146,29 +145,98 @@ A benchmark test is conducted in the paper\cite{mainpaper},
 	A [38] workload (50$\%$ reads and 50$\%$ writes).}
     \label{fig:mesh1}
 \end{figure}
-to introduce larger memory to cache more KV items, 
-to leverage some specific characteristic of different devices \cite{10.1145/3033273, 10.5555/2813767.2813783}, or to reduce the number of the levels\cite{SMRDB}.
-These solutions are mostly aimed at LSM-tree structure on individual nodes, but they don't take the utilization of other nodes in consideration.
 
 \subsubsection{Light-weight LSM Tree}
-The light-weight compaction tree \cite{Yao2017ALC} is a variant from the original LSM tree.
+The light-weight compaction tree(LWC-Tree) \cite{Yao2017ALC} is a variant from the original LSM tree. 
+The LWC-Tree tries to improve the write preformance during compaction by merging a little metadata rather than perform the operation on the while range of data.
+As is discussed previously, traditional lSM tree carries out compaction by read, sort and rewrite all whole tables. 
+\par
+LWC-Tree divides the overlapping data from the original table into small segments, and then appends these segments into the tables on the next level, 
+and then only merge related metadata, which is a very small scale compared to the original scale. 
+LWC-Tree organizes the DTable structure based on the change of metadata. 
+LWC-Tree also provides load balancing for the same level DTables to reduce hot spots as much as possible. 
+The balancer moves the overly-full tables data to other tables on the same level by adjusting the key range, which reduces the cost for data movement as much as possible.
 
-\subsection{Distributed Databases with LSM Storage Engines}
-TODO: sharding will not work
+
+\subsubsection{Reducing Involved Components in Compaction}
+Skip-tree \cite{7569086} solve the performance degradation caused by compaction in a quite aggresive way.
+As is discussed, I/O performance gets severe influence by the compaction due to heavily read and write-to-disk operations.
+So Skip-tree skips some components in compaction and put the output of the compaction into some larger components.
+The basic architecture of Skip-tree is shown in Figure 3.
+Skip-tree introduces a large size memory to store the index for the KV objects as a buffer.
+It push the KV objects into non-adjacent components via skipping components during the precedure of compaction as many as possible.
+This would reduce the steps of operations from memory to larger disk components, which reduces the I/O throughput.
+As a result, there will be fewer compactions before the KV objects reach the destination component.
+\begin{figure}[h]
+    \centering
+	\includegraphics[scale=0.3]{Skip-tree.png}
+    \caption{ The architecture of Skip-tree.}
+    \label{fig:mesh1}
+\end{figure}
+
+\subsubsection{Disk Side optimization}
+SMRDB \cite{SMRDB} is a KV data store that works specially for disks to address the need that to utilize disks by using approaches to leverage their proclivity for sequential writes as much as possible.
+It aims at providing a new key-value data management for SMR disks to handle the overlapping data in random write and in-place updates operations on the disk.
+SMRDB works as a KV database engine on the SMR disks. 
+\par
+The basic idea of SMR solution for LSM Tree is shown in Figure 4.
+\begin{figure}[h]
+    \centering
+	\includegraphics[scale=0.3]{SMR.png}
+    \caption{ LevelDB based data access management.}
+    \label{fig:mesh1}
+\end{figure}
+To meet the requirement of large data reorganization in LSM-Tree based databases, a simple SMR disks solution is introduced in this paper.
+Stitching is used in the compaction process, where it basicly moves part of the compaction data to a new area, 
+but some splited data will still remain in the same place and be stitched with in-coming new data.
+But it can't be evaluated how this scheme works when compactions are carried in the background.
+
+
 
 \subsection{Summary}
 It can be shown from the previous work that skew will cause severe performance degradation, and the database system suffer from I/O brusts due to compaction and disk flushing.
+MongoDB's solution to reduce skew is basically based on resharding and monitoring mechanism.
+There are also many solutions that try to slove the I/O and CPU perfromance degradation.
+But these three solutions above are mostly aimed at LSM-tree structure on individual nodes, they don't take the utilization of other nodes in consideration.
 Hailstrom tries to solve these problems by disaggregate resources to address load balancing at database and storage layers seperately.
 
-\section{Hailstrom: disaggregate compute and storage}
+\section{Design of Hailstrom: Disaggregate Compute and Storage}
 
-\subsection{Design principles}
+Hailstorm is designed to improve load balance and utilization for LSM-based distributed database.
+It on a higher level to reduce the skew for read and write operations, as well as to reduce the I/O and CPU performace issue caused by compaction behavior.
+The key idea of Hailstorm is to disaggregate compute and storage.
+
+\subsection{Basic Architecture}
+The basic architecture of Hailstorm shown in Figure 5. 
+Hailstorm works like a middleware in the middle of in-memory database storage instances and disk side storage devices.
+The Hailstorm filesystem contains three parts:
+1. Clients that provide filesystem interface to storage engines,
+2. Servers that operate on local storages to store data and relavant operations,
+3. Hailstorm agent in the middle to schedule operations of compaction tasks.
+
+\begin{figure}[h]
+    \centering
+	\includegraphics[scale=0.3]{Hailstorm2.png}
+    \caption{ Distributed database deployed on a Hailstorm architecture.
+	Hailstorm spreads data uniformly for each storage engine
+	across all pooled storage devices within the rack.}
+    \label{fig:mesh1}
+\end{figure}
+
+The user side operations could still operate on traditional databases. 
+
+\subsection{Hailstorm Filesystem Interface}
+Hailstorm provides a subset of POSIX filesystem interface to storage engines rather than block-level interface.
+As Hailstorm in the middle of local storage and database nodes, filesystem interface could provide filesystem-level informantion to sotrage engines.
+Therefore Hailstorm sheilds KV store related specialized implementation details, and exposes traditional POSIX interface to nodes.
+\par
+In order to promote I/O performance, Hailstorm filesystem keeps most metadata locally and use smaller block size compared with traditional LSM-based databases.
+The filesystem is also designed specially to reduce the influence of compaction, and aggresive prefetching is carried out to compaction tasks.
+
+\subsection{Storage Architecture Design}
 
 
-Describe the solution of the given paper, but do not copy it or repeat all of its details.
-Present and explain the main concepts. 
-%Do not forget to cite the paper~\cite{mainpaper} you have been assigned/chosen.
-Note that you should rename this section. 
+
 
 \section{Evaluation}
 
