@@ -11,7 +11,7 @@
 \usepackage{a4wide}
 \usepackage{graphicx}
 \usepackage[utf8]{inputenc}
-\usepackage[spanish]{babel}
+\usepackage[english]{babel}
 \usepackage{csquotes}
 \graphicspath{ {./images/} }
 \usepackage[colorlinks,hyperfigures,backref,bookmarks,draft=false]{hyperref}
@@ -207,6 +207,7 @@ It on a higher level to reduce the skew for read and write operations, as well a
 The key idea of Hailstorm is to disaggregate compute and storage.
 
 \subsection{Basic Architecture}
+\par
 The basic architecture of Hailstorm shown in Figure 5. 
 Hailstorm works like a middleware in the middle of in-memory database storage instances and disk side storage devices.
 The Hailstorm filesystem contains three parts:
@@ -226,6 +227,7 @@ The Hailstorm filesystem contains three parts:
 The user side operations could still operate on traditional databases. 
 
 \subsection{Hailstorm Filesystem Interface}
+\par
 Hailstorm provides a subset of POSIX filesystem interface to storage engines rather than block-level interface.
 As Hailstorm in the middle of local storage and database nodes, filesystem interface could provide filesystem-level informantion to sotrage engines.
 Therefore Hailstorm sheilds KV store related specialized implementation details, and exposes traditional POSIX interface to nodes.
@@ -234,15 +236,113 @@ In order to promote I/O performance, Hailstorm filesystem keeps most metadata lo
 The filesystem is also designed specially to reduce the influence of compaction, and aggresive prefetching is carried out to compaction tasks.
 
 \subsection{Storage Architecture Design}
+\par
+In order to provide disaggregation of computation and storage, the storage architecture of Hailstorm is designed to pool all data from nodes in a large rack.
+In the large rack, data is divided into small blocks (typically 1MB), which is designed in this way to reduce I/O latency and throughput in compaction.
+In this way, LSM storage could avoid flush stalls in compaction. 
+Another advantage of this approach is that as long as the bandwidth is wide enough, Hailstorm could work on the whole-rack level, 
+therefore there's no need nof locality consideration.
+The splited data blocks are spreaded uniformly to database servers. 
+In read operation, data could be accessed evenly, therefore there's no need to spend additional time for searching the position of data, as the locations are certain.
+The client would automatically prefetches blocks to promote the performace.
+\par
+Load balancing is an important goal of Hailstorm. 
+As data blocks are splited uniformly on different servers, load balancing can be well guaranted as it avoids the centralized data index management.
+Specifically, imbalance among servers are reduced in 2 ways.
+\begin{displayquote}
+	First, the pseudorandom
+	mapping M is a function of the file path (as denoted
+	previously byMF ), which ensures that different clients working
+	on different files do not operate in lockstep. Second, we
+	use batch sampling to ensure high storage utilization by ensuring
+	there are always multiple pending operations.
+\end{displayquote}
+Another goal of Haistorm is to improve the performance.
+In the part of storage design, this is achieved by prepatching. 
+Besides, in order to promote read performance, Hailstorm will have reads from previous threads at smaller block granularity.
 
-
+\subsection{Compaction Offloading}
+\par
+In the previous section, compaction offloading is disscussed, that by splitting data into small blocks, seperating blocks uniformly across servers, 
+and using aggresive pre-fetching mechanism, the performace influence of compaction could be reduced.
+In this section, specialized mechanisms are applied for compaction offloading.
+That is, generally, outsourcing compaction tasks to other machines.
+\par
+A lightweight backgroud agent is running to monitor the data usage situation. 
+The monitor process will detect if I/O or CPU resources are overload due to compaction.
+Hailstorm will then decide heuristicly whether to offload local compaction tasks, and in this way to balance CPU load within a rack over time.
 
 
 \section{Evaluation}
 
-Present and discuss measurements, experiments, examples, ... but do not repeat the entire evaluation of the original paper.
-\emph{Cite} all figures and tables copied form other papers.
-You can keep this section short and focus on the aspects that were improved by the paper compared to existing approaches.
+The goal of the evaluation is to judge the performance of Hailstorm on these aspects:
+\begin{displayquote}
+1. How do distributed databases perform when deployed
+on Hailstorm in terms of throughput and latency, especially
+in the presence of skew? 
+\newline
+2. Does resharding help in traditional deployments? How
+does it compare with Hailstorm?
+\newline
+3. Can databases supporting distributed SQL transactions
+benefit from using Hailstorm? 
+\newline
+4. What is the impact of different features of Hailstorm
+on performance and how does it compare with other
+distributed filesystems such as HDFS? Do configuration
+values affect performance? Can Hailstorm
+improve throughput for B-trees?
+\end{displayquote}
+Here we mainly focus on the performance of Hailstorm in sloving skew problem and compaction performance degradation.
+The benchmark is carried out on MongDB.
+The basic workflow to test how Hailstorm performs on solving skew is as following.
+Yahoo! Cloud Serving Benchmark (YCSB) is used to run the benchmark.
+YCSB provides 6 different senarios from YCSB A to YCSB F, and the paper add some other senarios in addition.
+The test workload table is shown in Figure 6.
+\begin{figure}[h]
+    \centering
+	\includegraphics[scale=0.3]{YCSB_workload.png}
+    \caption{MongoDB workloads description and characteristics}
+    \label{fig:mesh1}
+\end{figure}
+\begin{displayquote}
+	We first populate the database with 100 GB of data (100
+	million keys) from each workload before executing the workload
+	with an additional 100 GB of data (100 million keys).
+	We execute Nutanix’s workloads with a pre-populated database
+	containing 256 GB of data, and execute each workload
+	with an additional dataset size of 256 GB (approximately 700
+	million keys).
+\end{displayquote}
+
+\begin{figure}[h]
+    \centering
+	\includegraphics[scale=0.3]{YCSB_throughput.png}
+    \caption{MongoDB average throughput for Baseline and Hailstorm
+	for YCSB workloads with uniform and Zipfian key distributions.
+	Hailstorm maintains high throughput on all workloads.}
+    \label{fig:mesh1}
+\end{figure}
+As is shown in Figure 7, Hailstorm performs better than Baseline in throughput in handling Zipfan data, where there are more skews in the data set.
+In dealing with Uniform data, Hailstorm performs almost the same with the Baseline, and there are slightly more overheads in some senarios than the Baseline.
+\par
+Hailstorm is also tested with TiDB to see how it performs against compactions.
+TPC-C\cite{10.1145/369275.369291} benchmark and TPC-E\cite{10.1145/1942776.1942778} benchmark are carried out.
+It compares the throughput (measured in transactions per second) over a period of time of 1 hour for both scenarios and both benchmarks. 
+The result is shown in Figure 8.
+It can be concluded from the result that generally Hailstorm has a better performance in reducing performace degradation caused by compactions.
+Baseline suffers from compaction, as after a period of time, the throughput will decrease continuously due to the operation of compaction on TiKV instances and resharding operations.
+Hailstorm performs more stablily in the exsistence of skew. 
+The compaction offloading helps to drop some compaction tasks on certain nodes, and ensures a stable throughput in general.
+
+\begin{figure}[h]
+    \centering
+	\includegraphics[scale=0.3]{TiDB_result.png}
+    \caption{TiDB per 10-second throughput timelines (HH:mm)
+	for Baseline and Hailstorm with TPC-C and TPC-E.}
+    \label{fig:mesh1}
+\end{figure}
+
 
 \section{Discussion}
 
