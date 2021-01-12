@@ -1,0 +1,13 @@
+\backcite {mainpaper}{{2}{1}{section.1}}
+\backcite {LSM-Tree}{{2}{2.1}{subsection.2.1}}
+\backcite {RocksDB_compaction_algo1}{{2}{2.2}{subsection.2.2}}
+\backcite {mainpaper}{{3}{2.3}{subsection.2.3}}
+\backcite {mongodb,tidb}{{3}{2.4}{subsection.2.4}}
+\backcite {MongoDB_balancing1}{{4}{3.1}{subsection.3.1}}
+\backcite {MongoDB_sharding1}{{4}{3.1}{subsection.3.1}}
+\backcite {mainpaper}{{4}{3.2}{subsection.3.2}}
+\backcite {Yao2017ALC}{{4}{3.2.1}{subsubsection.3.2.1}}
+\backcite {7569086}{{5}{3.2.2}{subsubsection.3.2.2}}
+\backcite {SMRDB}{{5}{3.2.3}{subsubsection.3.2.3}}
+\backcite {10.1145/369275.369291}{{8}{5}{figure.7}}
+\backcite {10.1145/1942776.1942778}{{8}{5}{figure.7}}
