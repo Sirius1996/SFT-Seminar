@@ -1,10 +1,44 @@
 \begin{thebibliography}{10}
 
+\bibitem{MongoDB_sharding1}
+MongoDB.
+\newblock Chunk balancing and collection limits.
+\newblock
+  \url{https://github.com/mongodb/mongo/blob/master/src/mongo/db/s/README.md}.
+
+\bibitem{tidb}
+PingCAP.
+\newblock Tidb.
+\newblock \url{https://pingcap.com/}.
+
+\bibitem{Hua1991HandlingDS}
+K.~Hua and C.~Lee.
+\newblock Handling data skew in multiprocessor database computers using
+  partition tuning.
+\newblock In {\em VLDB}, 1991.
+
+\bibitem{10.1007/978-3-319-10085-2_18}
+Veronika Abramova, Jorge Bernardino, and Pedro Furtado.
+\newblock Evaluating cassandra scalability with ycsb.
+\newblock In Hendrik Decker, Lenka Lhotsk{\'a}, Sebastian Link, Marcus Spies,
+  and Roland~R. Wagner, editors, {\em Database and Expert Systems
+  Applications}, pages 199--207, Cham, 2014. Springer International Publishing.
+
+\bibitem{10.14778/2757807.2757810}
+Muhammad~Yousuf Ahmad and Bettina Kemme.
+\newblock Compaction management in distributed key-value datastores.
+\newblock {\em Proc. VLDB Endow.}, 8(8):850–861, April 2015.
+
 \bibitem{mainpaper}
 Willy~Zwaenepoel Laurent~Bindschaedler, Ashvin~Goel.
 \newblock Hailstorm: Disaggregated compute and storage for distributed
   lsm-based databases.
 \newblock {\em ASPLOS’20}, page 301–316, March 2020.
+
+\bibitem{SMRDB}
+Rekha Pitchumani, James Hughes, and Ethan Miller.
+\newblock Smrdb: Key-value data store for shingled magnetic recording disks.
+\newblock 05 2015.
 
 \bibitem{LSM-Tree}
 Patrick O'Neil, Edward Cheng, Dieter Gawlick, and Elizabeth O'Neil.
@@ -16,26 +50,20 @@ RocksDB.
 \newblock Overview of compaction algorithm.
 \newblock \url{https://github.com/facebook/rocksdb/wiki/Compaction}.
 
+\bibitem{LSM-Tree-Fig}
+LSM-Tree-compaction.
+\newblock Lsm-tree-fig.
+\newblock \url{https://en.wikipedia.org/wiki/Log-structured_merge-tree/}.
+
 \bibitem{mongodb}
 Mongodb.
 \newblock \url{https://www.mongodb.com/}.
-
-\bibitem{tidb}
-PingCAP.
-\newblock Tidb.
-\newblock \url{https://pingcap.com/}.
 
 \bibitem{MongoDB_balancing1}
 MongoDB.
 \newblock Sharding internals.
 \newblock
   \url{https://www.mongodb.com/blog/post/sharding-pitfalls-part-iii-chunk-balancing-and}.
-
-\bibitem{MongoDB_sharding1}
-MongoDB.
-\newblock Chunk balancing and collection limits.
-\newblock
-  \url{https://github.com/mongodb/mongo/blob/master/src/mongo/db/s/README.md}.
 
 \bibitem{Yao2017ALC}
 T.~Yao, Jiguang Wan, P.~Huang, Xubin He, Q.~Gui, F.~Wu, and C.~Xie.
@@ -49,21 +77,9 @@ Y.~{Yue}, B.~{He}, Y.~{Li}, and W.~{Wang}.
 \newblock {\em IEEE Transactions on Parallel and Distributed Systems},
   28(4):961--973, 2017.
 
-\bibitem{SMRDB}
-Rekha Pitchumani, James Hughes, and Ethan Miller.
-\newblock Smrdb: Key-value data store for shingled magnetic recording disks.
-\newblock 05 2015.
-
-\bibitem{10.1145/369275.369291}
-Meikel Poess and Chris Floyd.
-\newblock New tpc benchmarks for decision support and web commerce.
-\newblock {\em SIGMOD Rec.}, 29(4):64–71, December 2000.
-
-\bibitem{10.1145/1942776.1942778}
-Shimin Chen, Anastasia Ailamaki, Manos Athanassoulis, Phillip~B. Gibbons, Ryan
-  Johnson, Ippokratis Pandis, and Radu Stoica.
-\newblock Tpc-e vs. tpc-c: Characterizing the new tpc-e benchmark via an i/o
-  comparison study.
-\newblock {\em SIGMOD Rec.}, 39(3):5–10, February 2011.
+\bibitem{wiredtiger}
+wiredtiger.
+\newblock wiredtiger.
+\newblock \url{http://www.wiredtiger.com/}.
 
 \end{thebibliography}

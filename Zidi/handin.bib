@@ -71,10 +71,20 @@ series = {USENIX ATC '15}
   title        = {TiDB},
   howpublished = {\url{https://pingcap.com/}},
 }
+@misc{LSM-Tree-Fig,
+  author       = {LSM-Tree-compaction},
+  title        = {LSM-Tree-Fig},
+  howpublished = {\url{https://en.wikipedia.org/wiki/Log-structured_merge-tree/}},
+}
 @misc{RocksDB_compaction_algo1,
   author       = {RocksDB},
   title        = {Overview of Compaction algorithm},
   howpublished = {\url{https://github.com/facebook/rocksdb/wiki/Compaction}},
+}
+@misc{wiredtiger,
+  author       = {wiredtiger},
+  title        = {wiredtiger},
+  howpublished = {\url{http://www.wiredtiger.com/}},
 }
 @misc{MongoDB_balancing1,
   author       = {MongoDB},
@@ -129,4 +139,45 @@ journal = {SIGMOD Rec.},
 month = feb,
 pages = {5–10},
 numpages = {6}
+}
+@inproceedings{Hua1991HandlingDS,
+  title={Handling Data Skew in Multiprocessor Database Computers Using Partition Tuning},
+  author={K. Hua and C. Lee},
+  booktitle={VLDB},
+  year={1991}
+}
+@InProceedings{10.1007/978-3-319-10085-2_18,
+author="Abramova, Veronika
+and Bernardino, Jorge
+and Furtado, Pedro",
+editor="Decker, Hendrik
+and Lhotsk{\'a}, Lenka
+and Link, Sebastian
+and Spies, Marcus
+and Wagner, Roland R.",
+title="Evaluating Cassandra Scalability with YCSB",
+booktitle="Database and Expert Systems Applications",
+year="2014",
+publisher="Springer International Publishing",
+address="Cham",
+pages="199--207",
+abstract="NoSQL data stores appeared to fill a gap in the database market: that of highly scalable data storage that can be used for simple storage and retrieval of key-indexed data while allowing easy data distribution over a possibly large number of servers. Cassandra has been pinpointed as one of the most efficient and scalable among currently existing NoSQL engines. Scalability of these engines means that, by adding nodes, we could have more served requests with the same performance and more nodes could result in reduced execution time of requests. However, we will see that adding nodes not always results in performance increase and we investigate how the workload, database size and the level of concurrency are related to the achieved scaling level. We will overview Cassandra data store engine, and then we evaluate experimentally how it behaves concerning scaling and request time speedup. We use the YCSB -- Yahoo! Cloud Serving Benchmark for these experiments.",
+isbn="978-3-319-10085-2"
+}
+@article{10.14778/2757807.2757810,
+author = {Ahmad, Muhammad Yousuf and Kemme, Bettina},
+title = {Compaction Management in Distributed Key-Value Datastores},
+year = {2015},
+issue_date = {April 2015},
+publisher = {VLDB Endowment},
+volume = {8},
+number = {8},
+issn = {2150-8097},
+url = {https://doi.org/10.14778/2757807.2757810},
+doi = {10.14778/2757807.2757810},
+abstract = {Compactions are a vital maintenance mechanism used by datastores based on the log-structured merge-tree to counter the continuous buildup of data files under update-intensive workloads. While compactions help keep read latencies in check over the long run, this comes at the cost of significantly degraded read performance over the course of the compaction itself. In this paper, we offer an in-depth analysis of compaction-related performance overheads and propose techniques for their mitigation. We offload large, expensive compactions to a dedicated compaction server to allow the datastore server to better utilize its resources towards serving the actual workload. Moreover, since the newly compacted data is already cached in the compaction server's main memory, we fetch this data over the network directly into the datastore server's local cache, thereby avoiding the performance penalty of reading it back from the filesystem. In fact, pre-fetching the compacted data from the remote cache prior to switching the workload over to it can eliminate local cache misses altogether. Therefore, we implement a smarter warmup algorithm that ensures that all incoming read requests are served from the datastore server's local cache even as it is warming up. We have integrated our solution into HBase, and using the YCSB and TPC-C benchmarks, we show that our approach significantly mitigates compaction-related performance problems. We also demonstrate the scalability of our solution by distributing compactions across multiple compaction servers.},
+journal = {Proc. VLDB Endow.},
+month = apr,
+pages = {850–861},
+numpages = {12}
 }

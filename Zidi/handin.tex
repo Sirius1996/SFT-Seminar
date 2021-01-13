@@ -25,10 +25,10 @@
 \maketitle
 
 \begin{abstract}
-	Distributed LSM-based databases usually face some performance issue due to its structure and mechanism.
+	Distributed LSM-based databases usually face some performance issues due to their structure and mechanism.
 	Skew and compaction could cause severe I/O and CPU performance degradation.
-	In this research paper, we mainly focus on Hailstorm which provides a way that disaggregate computation and sotrage in distributed databases to reduce the performance degradation.
-	Beside, this paper also researched some ohter studies that tried to solve the performance issule caused by skew and compaction, which mainly focus on optimizing the structure of LSM-Tree, 
+	In this research paper, we mainly focus on Hailstorm which provides a way that disaggregates computation and storage in distributed databases to reduce the performance degradation.
+	Besides, this paper also researched some other studies that tried to solve the performance issue caused by skew and compaction, which mainly focus on optimizing the structure of LSM-Tree, 
 	utilizing specific characteristics of certain hardware or databases structure. 
 	The performance of these research works will also be discussed.
 \end{abstract}
@@ -36,29 +36,41 @@
 \tableofcontents
 
 \section{Introduction of the Research Field}
+\label{Intro}
 
-Distributed databases like MongoDB, TiDB have been more widely used in many large-scale services scenarios.
+Distributed databases like MongoDB\cite{MongoDB_sharding1}, TiDB\cite{tidb} have been more widely used in many large-scale service scenarios.
+Distributed databases shard data across multiple machines and manage the data on each machine using embedded storage engines.
 But in many cases, distributed databases could suffer performance degradation and low utilization from skew, background operation and compaction.
+\par
+Skew occurs naturally in many workloads and causes CPU and I/O imbalance, which degrades overall throughput and response time. \cite{Hua1991HandlingDS}
+Current LSM-based databases address skew by resharding data\cite{MongoDB_sharding1,tidb} across machines but this operation is expensive because it involves bulk migration of data, which affects foreground operations.
+Background operations such as flushing and compaction can cause significant I/O and CPU bursts, leading to severe latency spikes, especially for queries spanning multiple nodes such as range queries \cite{10.1007/978-3-319-10085-2_18, 10.14778/2757807.2757810}.
+\par
 This paper researches some soutions to these issues.
 The main paper~\textit{Hailstorm: Disaggregated Compute and Storage for Distributed LSM-based Databases} \cite{mainpaper}introduces Hailstorm, a system that disaggregates storage and compute for distributed LSM-based databases.
 Hailstorm provides a storage pooling mechanism, in which the data blocks are sharded into smaller pieces than traditional LSM-based database systems, which will promote the read / write performance, 
 as well as reducing the bad influence on I/O and CPU performance caused by compaction.
 It shows that Hailstorm achieves load balance in many MongoDB deployments with skewed workloads, improving the average throughput by 60$\%$, while decreasing tail latency by as much as 5×.
 \par
-Some other studies about these relevant topics are also discussed. 
 There are also some works that focus on relatively lower level of LSM-based databases.
 MongoDB provides resharding and monitoring mechanisms to reduce skew problem and ahcieve load balancing.
 Light-weight LSM-Tree (LWC-Tree) is a variant of LSM-Tree which promotes the compaction performance by changing the structure and compaction mechanism.
-SMRDB utilizes the characteristics of SMR disks and provides better performance on the database server side.
-Basic solutions to these works will be discussed in the Section 3 and Section 4.
+SMRDB\cite{SMRDB} utilizes the characteristics of SMR\footnote{Shingled Magnetic Recording (SMR) Shingled magnetic recording (SMR) is a magnetic storage data recording technology used in hard disk drives (HDDs) to increase storage density and overall per-drive storage capacity.} \cite{SMRDB} disks and provides better performance on the database server side.
+Basic solutions to these works will be discussed in the \ref{Relabted} and \ref{Design}.
+However, these works mostly focus on some certain parts of the LSM-Tree structure and lack of versatility.
+They don’t take theutilization of other nodes in consideration. 
+When it comes to different storage engines or environments, they require a lot of changes.
+Hailstorm provides a different solution from these related works, where it runs as a middleware between database and storage engines, providing more flexibility and versatility.
 \par
-The rest of the paper will discuss the evaluation of the Hailstorm as well as some effects of other solutions.
-Section 6 provides some discussion of these different approaches.
-Section 7 will provide conclusions.
+The rest of the paper will discuss the evaluation of the Hailstorm as well as some effects of other solutions
+Section \ref{Diss} provides some discussion of these different approaches.
+\ref{Evaluation} will provide conclusions.
 
 \section{Basics}
+\label{Basics}
 
 \subsection{LSM-Tree}
+\label{Basic.LSM-tree}
 
 Traditional disk-based index structures such as the B-tree will effectively double the I/O cost of the transaction to maintain an index such as this in real time, increasing the total system cost up to fifty percent. 
 Hence Log-structured merge tree (LSM-Tree) \cite{LSM-Tree} has been widely used by many distributed databases, as it provides efficient indexing for a key-value store with a high rate of inserts and deletes.
@@ -66,8 +78,10 @@ The LSM-Tree uses an algorithm that defers and batches index changes, cascading 
 During this process all index values are continuously accessible to retrievals (aside from very short locking periods), either through the memory component or one of the disk components.
 
 \subsection{Compaction in LSM KV Stores}
+\label{Basic.Compaction}
 
-Compaction is a critical mechanism in a system based on LSM-Tree. 
+
+Compaction\cite{10.14778/2757807.2757810} is a critical mechanism in a system based on LSM-Tree. 
 Log append method brings high-throughput writes. 
 As the sstable continues to be written, more and more files will be opened by the system, and the accumulated data changes (updates, deletes) operations for the same key will increase. 
 Since sstable is immutable, the data in the memory will reach the upper limit in certain layer.
@@ -79,18 +93,17 @@ This is the responsibility of a process called compaction.
 Compaction is a background process that is continuously combining old segments together into newer segments.
 Once the compaction process has written a new segment for the input segments, the old segment files are deleted.
 \par
-Compaction can be implemented in many ways. For example, RocksDB implements Tiered+Leveled, termed Level compaction\cite{RocksDB_compaction_algo1}. 
-\par
+Compaction can be implemented in many ways. For example, RocksDB implements Tiered+ Leveled, termed Level compaction\cite{RocksDB_compaction_algo1}. 
 Generally, in LSM-Tree, each level contains multiple partitions of data sorted by keys. When  compaction will be triggered by continuously recycling old version data and merging multiple layers into one layer through periodic background tasks.
 The basic procedure goes as follows:
 \begin{figure}[h]
     \centering
 	\includegraphics[scale=0.3]{LSM_Tree1.png}
-    \caption{LSM-Tree}
+	\caption{LSM-Tree \cite{LSM-Tree-Fig}}
     \label{fig:mesh1}
 \end{figure}
 \par
-As is shown in Figure. Compaction into level N (L(n)) merges data from L(n-1) to L(n), where data is rewrited into the new level. 
+As is shown in Figure \ref{fig:mesh1}, compaction into level N (L(n)) merges data from L(n-1) to L(n), where data is rewrited into the new level. 
 In original paper of LSM-Tree, all data from L(n-1) is merged into L(n). 
 In modern distributed databases such as LevelDB and RocksDB, overlapping data is eliminated, therefore for most time, only some data will be merged into new level.
 \par
@@ -98,7 +111,8 @@ Generally, LSM-Tree will continuously compact key-value pairs ,and the compactio
 
 
 \subsection{Sharding and Tow-level Sharding}
-Sharding is widely used in distributed databases. Large data sets or high throughput applications can challenge the capacity of one single server.
+\label{Basic.sharding}
+Sharding is widely used in distributed databases\cite{MongoDB_sharding1}. Large data sets or high throughput applications can challenge the capacity of one single server.
 Each area has the same schema and columns, but each table has completely different rows. 
 Similarly, the data stored in each partition is unique and has nothing to do with the data stored in other partitions.
 Sharding divides a piece of data into two or more smaller blocks, called logical shards.
@@ -106,7 +120,7 @@ Then, logical shards are distributed on separate database nodes, called physical
 Physical shards can hold multiple logical shards. 
 Nevertheless, the data stored in all shards collectively represent the entire logical data set.
 \par
-A tow-level sharding way is introduced in the paper\cite{mainpaper}, where sharding is seperated into storage-level and database-level.
+A tow-level sharding way is introduced in the main paper, where sharding is seperated into storage-level and database-level.
 The data for each database shard is spread uniformly across all the storage devices in a rack in small blocks (1 MB).
 This approach effectively provides a second, storage-level sharding layer that guarantees high storage utilization even in the presence of skew, removes per-node disk space constraints, and eliminates the need for database-level resharding within the rack. 
 Together storage pooling and fine-granularity data spreading allow Hailstorm to improve I/O and storage capacity balance.
@@ -115,7 +129,7 @@ The target LSM-based databases still use the filesystem solution to redistribute
 
 
 \subsection{Skew in Distributed Databases}
-
+\label{Basic.skew}
 Distributed databases \cite{mongodb,tidb} are designed for large-scale data storage, which usually run on multiple nodes in the same,
 or even partitioned networks.
 Distributed database use sharding to handle larger dataset and handle additional requests by distributing the data among multiple machines.
@@ -126,10 +140,10 @@ This could lead to globally performance degradation.
 
 
 \section{Previous and Related Work}
+\label{Relabted}
 
 \subsection{MongoDB's Solution of Reducing Skew}
 
-Previously proposed solutions to eliminate skew in several ways.
 MongoDB introduces a balancer to mitigate imbalanced shards\cite{MongoDB_balancing1}.
 Some manual operations can also be performed, e.g., moving "hotspot" chunks manually to address the imbalances. 
 In practice, some table related operations will also work, e.g., spliting one table into several sub-tables.
@@ -154,21 +168,15 @@ Resharding operation may still cause some performance loss, some manual operatio
 \subsection{Compaction and performance degradation}
 Compaction may cause severe I/O performance degradation in LSM-based distributed databases, 
 as it merges multiple tables and writes back to disk, which will typically comsue large I/O and CPU computing resources.
-A benchmark test is conducted in the paper\cite{mainpaper}, 
-\begin{displayquote}
-	Profiling this particular experiment
-	reveals that storage is saturated as I/O bandwidth remains
-	almost constantly close to 320 MB/s, the maximum write
-	bandwidth for our SSD. We also observe peaks of CPU utilization
-	when compaction tasks run. 
-\end{displayquote}
+A benchmark test is conducted in the mainpaper.
+\par
+Profiling this particular experiment reveals that storage is saturated as I/O bandwidth remains almost constantly close to 320 MB/s, the maximum write bandwidth for our SSD. 
+We also observe peaks of CPU utilization when compaction tasks run. 
 \begin{figure}[h]
     \centering
 	\includegraphics[scale=0.3]{Campaction perf.png}
-    \caption{Embedded RocksDB throughput over time (HH:mm) on
-	a node equipped with an Intel S3500 Series SSD using the YCSB
-	A [38] workload (50$\%$ reads and 50$\%$ writes).}
-    \label{fig:mesh1}
+    \caption{Embedded RocksDB throughput over time. \cite{mainpaper}}
+    \label{fig:mesh2}
 \end{figure}
 
 \subsubsection{Light-weight LSM-Tree}
@@ -178,6 +186,7 @@ As is discussed previously, traditional LSM-Tree carries out compaction by read,
 \par
 LWC-Tree divides the overlapping data from the original table into small segments, and then appends these segments into the tables on the next level, 
 and then only merge related metadata, which is a very small scale compared to the original scale. 
+As the unit of data management in LWC-tree, the table is defined as a DTable.
 LWC-Tree organizes the DTable structure based on the change of metadata. 
 LWC-Tree also provides load balancing for the same level DTables to reduce hot spots as much as possible. 
 The balancer moves the overly-full tables data to other tables on the same level by adjusting the key range, which reduces the cost for data movement as much as possible.
@@ -187,16 +196,16 @@ The balancer moves the overly-full tables data to other tables on the same level
 Skip-tree \cite{7569086} solve the performance degradation caused by compaction in a quite aggressive way.
 As is discussed, I/O performance gets severe influence by the compaction due to heavily read and write-to-disk operations.
 So Skip-tree skips some components in compaction and put the output of the compaction into some larger components.
-The basic architecture of Skip-tree is shown in Figure 3.
+The basic architecture of Skip-tree is shown in Figure \ref{fig:mesh3}.
 Skip-tree introduces a large size memory to store the index for the KV objects as a buffer.
 It push the KV objects into non-adjacent components via skipping components during the procedure of compaction as many as possible.
 This would reduce the steps of operations from memory to larger disk components, which reduces the I/O throughput.
 As a result, there will be fewer compactions before the KV objects reach the destination component.
 \begin{figure}[h]
     \centering
-	\includegraphics[scale=0.3]{Skip-tree.png}
-    \caption{ The architecture of Skip-tree.}
-    \label{fig:mesh1}
+	\includegraphics[scale=0.5]{Skip-tree.png}
+    \caption{ The architecture of Skip-tree. \cite{7569086}}
+    \label{fig:mesh3}
 \end{figure}
 
 \subsubsection{Disk Side optimization}
@@ -204,12 +213,12 @@ SMRDB \cite{SMRDB} is a KV data store that works specially for disks to address 
 It aims at providing a new key-value data management for SMR disks to handle the overlapping data in random write and in-place updates operations on the disk.
 SMRDB works as a KV database engine on the SMR disks. 
 \par
-The basic idea of SMR solution for LSM-Tree is shown in Figure 4.
+The basic idea of SMR solution for LSM-Tree is shown in Figure \ref{fig:mesh4}.
 \begin{figure}[h]
     \centering
 	\includegraphics[scale=0.3]{SMR.png}
-    \caption{ LevelDB based data access management.}
-    \label{fig:mesh1}
+    \caption{ LevelDB based data access management. \cite{SMRDB}}
+    \label{fig:mesh4}
 \end{figure}
 To meet the requirement of large data reorganization in LSM-Tree based databases, a simple SMR disks solution is introduced in this paper.
 Stitching is used in the compaction process, where it basicly moves part of the compaction data to a new area, 
@@ -224,6 +233,7 @@ But these three solutions above are mostly aimed at LSM-Tree structure on indivi
 Hailstrom tries to solve these problems by disaggregate resources to address load balancing at database and storage layers separately.
 
 \section{Design of Hailstrom: Disaggregate Compute and Storage}
+\label{Design}
 
 Hailstorm is designed to improve load balance and utilization for LSM-based distributed database.
 It on a higher level to reduce the skew for read and write operations, as well as to reduce the I/O and CPU performance issue caused by compaction behavior.
@@ -231,23 +241,27 @@ The key idea of Hailstorm is to disaggregate compute and storage.
 
 \subsection{Basic Architecture}
 \par
-The basic architecture of Hailstorm shown in Figure 5. 
+The basic architecture of Hailstorm shown in Figure \ref{fig:mesh5}. 
 Hailstorm works like a middleware in the middle of in-memory database storage instances and disk side storage devices.
+Hailstorm spreads data uniformly for each storage engine across all pooled storage devices within the rack.
 The Hailstorm filesystem contains three parts:
+\newline
 1. Clients that provide filesystem interface to storage engines,
+\newline
 2. Servers that operate on local storages to store data and relevant operations,
+\newline
 3. Hailstorm agent in the middle to schedule operations of compaction tasks.
+\newline
+The user side operations could still operate on traditional databases. 
 
 \begin{figure}[h]
     \centering
 	\includegraphics[scale=0.3]{Hailstorm2.png}
-    \caption{ Distributed database deployed on a Hailstorm architecture.
-	Hailstorm spreads data uniformly for each storage engine
-	across all pooled storage devices within the rack.}
-    \label{fig:mesh1}
+    \caption{ Distributed database deployed on a Hailstorm architecture.}
+    \label{fig:mesh5}
 \end{figure}
 
-The user side operations could still operate on traditional databases. 
+
 
 \subsection{Hailstorm Filesystem Interface}
 \par
@@ -272,16 +286,14 @@ The client would automatically prefetch blocks to promote the performance.
 Load balancing is an important goal of Hailstorm. 
 As data blocks are splited uniformly on different servers, load balancing can be well guaranted as it avoids the centralized data index management.
 Specifically, imbalance among servers are reduced in 2 ways.
-\begin{displayquote}
-	First, the pseudorandom
-	mapping M is a function of the file path (as denoted
-	previously byMF ), which ensures that different clients working
-	on different files do not operate in lockstep. Second, we
-	use batch sampling to ensure high storage utilization by ensuring
-	there are always multiple pending operations.
-\end{displayquote}
+First, the pseudorandom mapping function M is a function of the file path, which ensures that different clients working on different files do not operate in lockstep.
+Second, we use batch sampling to ensure high storage utilization by ensuring there are always multiple pending operations.
+We assume there are as many clients as servers. Each client concurrently reads and writes from K distinct servers. 
+Given N servers, there will always be KN pending operations within the rack.
+For a value of K = 3, this probability is $\%$95 and for K = 5, we get over $\%$99. \cite{mainpaper}
 Another goal of Haistorm is to improve the performance.
 In the part of storage design, this is achieved by prepatching. 
+By targeting rack-scale deployment and specializing our filesystem, Hailstorm can provide high storage utilization, provide optimizations such as prefetching sstables blocks and accessing files at different block granularities.
 Besides, in order to promote read performance, Hailstorm will have reads from previous threads at smaller block granularity.
 
 \subsection{Compaction Offloading}
@@ -297,79 +309,104 @@ Hailstorm will then decide heuristicly whether to offload local compaction tasks
 
 
 \section{Evaluation}
+\label{Evaluation}
+The goal of the evaluation is to judge the performance of Hailstorm on these aspects\cite{mainpaper}:
+\newline
+1. How do distributed databases perform when deployed on Hailstorm in terms of throughput, especially in the presence of skew? 
+\newline
+2. Does resharding help in traditional deployments? How does it compare with Hailstorm?
+\newline
+3. What is the impact of different features of Hailstorm on performance and how does it compare with other distributed filesystems such as HDFS? 
+Do configuration values affect performance? Can Hailstorm improve throughput for B-trees?
 
-The goal of the evaluation is to judge the performance of Hailstorm on these aspects:
-\begin{displayquote}
-1. How do distributed databases perform when deployed
-on Hailstorm in terms of throughput and latency, especially
-in the presence of skew? 
-\newline
-2. Does resharding help in traditional deployments? How
-does it compare with Hailstorm?
-\newline
-3. Can databases supporting distributed SQL transactions
-benefit from using Hailstorm? 
-\newline
-4. What is the impact of different features of Hailstorm
-on performance and how does it compare with other
-distributed filesystems such as HDFS? Do configuration
-values affect performance? Can Hailstorm
-improve throughput for B-trees?
-\end{displayquote}
+\subsection{Performance of Throughput}
 Here we mainly focus on the performance of Hailstorm in sloving skew problem and compaction performance degradation.
 The benchmark is carried out on MongoDB.
 The basic workflow to test how Hailstorm performs on solving skew is as follows.
-Yahoo! Cloud Serving Benchmark (YCSB) is used to run the benchmark.
+Here, Yahoo! Cloud Serving Benchmark (YCSB)\cite{10.1007/978-3-319-10085-2_18} is used to run the benchmark.
 YCSB provides 6 different scenarios from YCSB A to YCSB F, and the paper adds some other scenarios in addition.
-The test workload table is shown in Figure 6.
+The test workload table is shown in Figure \ref{fig:mesh6}.
+\par
+To evaluate the impact of skew, we consider uniform and Zipfian key distributions for YCSB workloads.
+Zipfian key distributions are skewed, simulating the effect of popular keys. 
+Nutanix’s workloads are write-intensive workloads from production clusters. 
+Nutanix 1 is more uniform than Nutanix 2, which has some skew.
 \begin{figure}[h]
     \centering
 	\includegraphics[scale=0.3]{YCSB_workload.png}
-    \caption{MongoDB workloads description and characteristics}
-    \label{fig:mesh1}
+    \caption{MongoDB workloads description and characteristics \cite{mainpaper}}
+    \label{fig:mesh6}
 \end{figure}
-\begin{displayquote}
-	We first populate the database with 100 GB of data (100
-	million keys) from each workload before executing the workload
-	with an additional 100 GB of data (100 million keys).
-	We execute Nutanix’s workloads with a pre-populated database
-	containing 256 GB of data, and execute each workload
-	with an additional dataset size of 256 GB (approximately 700
-	million keys).
-\end{displayquote}
+\newline
+We first populate the database with 100 GB of data (100 million keys) from each workload before executing the workload with an additional 100 GB of data (100 million keys).
+We execute Nutanix’s workloads with a pre-populated database containing 256 GB of data, and execute each workload with an additional dataset size of 256 GB (approximately 700 million keys).
 
 \begin{figure}[h]
     \centering
 	\includegraphics[scale=0.3]{YCSB_throughput.png}
     \caption{MongoDB average throughput for Baseline and Hailstorm
 	for YCSB workloads with uniform and Zipfian key distributions.
-	Hailstorm maintains high throughput on all workloads.}
-    \label{fig:mesh1}
+	Hailstorm maintains high throughput on all workloads. \cite{mainpaper}}
+    \label{fig:mesh7}
 \end{figure}
-As is shown in Figure 7, Hailstorm performs better than Baseline in throughput in handling Zipfan data, where there are more skews in the data set.
+As is shown in Figure \ref{fig:mesh7}, Hailstorm performs better than Baseline in throughput in handling Zipfan data, where there are more skews in the data set.
 In dealing with Uniform data, Hailstorm performs almost the same with the Baseline, and there are slightly more overheads in some scenarios than the Baseline.
-\par
-Hailstorm is also tested with TiDB to see how it performs against compactions.
-TPC-C\cite{10.1145/369275.369291} benchmark and TPC-E\cite{10.1145/1942776.1942778} benchmark are carried out.
-It compares the throughput (measured in transactions per second) over a period of time of 1 hour for both scenarios and both benchmarks. 
-The result is shown in Figure 8.
 It can be concluded from the result that generally Hailstorm has a better performance in reducing the performance degradation caused by compactions.
+\par
+Hailstorm performs better in terms of throughput in the presence of skew than the baseline.
 Baseline suffers from compaction, as after a period of time, the throughput will decrease continuously due to the operation of compaction on TiKV instances and resharding operations.
 Hailstorm performs more stablily in the existence of skew. 
 The compaction offloading helps to drop some compaction tasks on certain nodes, and ensures a stable throughput in general.
 
+
+\subsection{Resharding Costs}
+\begin{table}
+	\centering
+	\begin{tabular}{|c|c|c|} %l(left)居左显示 r(right)居右显示 c居中显示
+		\hline 
+		&Resharding=OFF&Resharding=ON \\
+		\hline  
+		Baseline&42.9 KOps/s&58.9 KOps/s \\
+		\hline 
+		Hailstorm&130.2 KOps/s&113.0 KOps/s \\
+		\hline
+	\end{tabular}
+	\label{table:mesh1}
+	\caption{MongoDB average throughput for Baseline and Hailstorm with resharding enabled or disabled. \cite{mainpaper}}
+\end{table}
+Table \ref{table:mesh1} shows the average throughput in MongoDB for Baseline and Hailstorm for YCSB A with Zipfian distribution and
+with resharding enabled or disabled.
+\par
+It can be concluded from Table \ref{table:mesh1} that Hailstorm and Baseline both perform better with sharding.
+Turning resharding off for MongoDB causes throughput to drop by 27$\%$. 
+Clearly, resharding in MongoDB is beneficial in skewed workloads.
+Hailstorm performs better than Baseline with or without resharding, indicating that storage pooling and compaction offloading are more effective than resharding.
+
+% \begin{figure}[h]
+%     \centering
+% 	\includegraphics[scale=0.3]{TiDB_result.png}
+%     \caption{TiDB per 10-second throughput timelines (HH:mm)
+% 	for Baseline and Hailstorm with TPC-C and TPC-E. \cite{mainpaper}}
+%     \label{fig:mesh8}
+% \end{figure}
+
+\subsection{Using Hailstorm with B-trees}
+Here the paper tests how Hailstorm performs on storage engines based on B-trees, e.g., WiredTiger\cite{wiredtiger}.
+Figure \ref{fig:mesh9} compares the average throughput achieved by MongoDB with the B-tree-based WiredTiger storage engine for Baseline and Hailstorm for all YCSB workloads using both uniform and Zipfian distributions on 8 machines. 
 \begin{figure}[h]
     \centering
-	\includegraphics[scale=0.3]{TiDB_result.png}
-    \caption{TiDB per 10-second throughput timelines (HH:mm)
-	for Baseline and Hailstorm with TPC-C and TPC-E.}
-    \label{fig:mesh1}
+	\includegraphics[scale=0.3]{B-tree eva.png}
+    \caption{MongoDB with B-Tree average throughput for Baseline and Hailstorm \cite{mainpaper}}
+    \label{fig:mesh9}
 \end{figure}
+Unlike with LSM stores, Hailstorm does not improve performance for reads in the presence of skew because the CPU, not the I/O, is the bottleneck. 
+Hailstorm improves performance for range-based queries in YCSB E as it partially relieves the overloaded node that becomes a straggler.
 
 
 \section{Discussion}
+\label{Diss}
 Hailstorm provides a mechanism that works on a relatively higher level to promote the load balancing and compaction performance than the solutions discussed in the related work section.
-Hailstorm act in the middle of database server and client nodes, providing basic filesystem interface, and disaggregate compute and storage to improve both independently and load balance.
+It acts in the middle of database server and client nodes, providing basic filesystem interface, and disaggregate compute and storage to improve both independently and load balance.
 Compared with Hailstorm, solutions in related work mainly focus on improvement on a single node or some variant of the basic structure of distributed databases - LSM-Tree.
 The advantage of Hailstorm is that it provides a way that act as a middleware in the computation part and storage part, rather than changing the low-level structure, 
 which is more general for different kinds of use cases.
