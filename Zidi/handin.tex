@@ -56,7 +56,7 @@ There are also some works that focus on relatively lower level of LSM-based data
 MongoDB provides resharding and monitoring mechanisms to reduce skew problem and ahcieve load balancing.
 Light-weight LSM-Tree (LWC-Tree) is a variant of LSM-Tree which promotes the compaction performance by changing the structure and compaction mechanism.
 SMRDB\cite{SMRDB} utilizes the characteristics of SMR\footnote{Shingled Magnetic Recording (SMR) Shingled magnetic recording (SMR) is a magnetic storage data recording technology used in hard disk drives (HDDs) to increase storage density and overall per-drive storage capacity.} \cite{SMRDB} disks and provides better performance on the database server side.
-Basic solutions to these works will be discussed in the \ref{Relabted} and \ref{Design}.
+Basic solutions to these works will be discussed in the section \ref{Relabted} and section \ref{Design}.
 However, these works mostly focus on some certain parts of the LSM-Tree structure and lack of versatility.
 They don’t take theutilization of other nodes in consideration. 
 When it comes to different storage engines or environments, they require a lot of changes.
@@ -64,7 +64,7 @@ Hailstorm provides a different solution from these related works, where it runs 
 \par
 The rest of the paper will discuss the evaluation of the Hailstorm as well as some effects of other solutions
 Section \ref{Diss} provides some discussion of these different approaches.
-\ref{Evaluation} will provide conclusions.
+Section \ref{Evaluation} will provide conclusions.
 
 \section{Basics}
 \label{Basics}
